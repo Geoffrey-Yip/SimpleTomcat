@@ -1,9 +1,9 @@
 package me.geoffrey.tomcat.server.carrier;
 
+import me.geoffrey.tomcat.server.util.ArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -19,11 +19,13 @@ public class Request {
     private InputStream requestStream;
     private String uri;
 
-    public Request(InputStream requestStream) {
-        this.requestStream = requestStream;
-        parseRequest(requestStream);
+    public InputStream getRequestStream() {
+        return requestStream;
     }
 
+    public void setRequestStream(InputStream requestStream) {
+        this.requestStream = requestStream;
+    }
 
     public String getUri() {
         return uri;
@@ -39,22 +41,20 @@ public class Request {
         LOGGER.info(uri);
     }
 
-    private void parseRequest(InputStream in) {
-        BufferedInputStream stream = new BufferedInputStream(in);
-        byte[] cacheArray = new byte[8096];
+    public void parseRequest() {
+        byte[] bytes = ArrayUtil.generatorCache();
         StringBuilder sb = new StringBuilder();
-        int cache;
-        try {
-            while ((cache = stream.read(cacheArray)) != -1) {
-                sb.append(new String(cacheArray, 0, cache));
+        try{
+            while (requestStream.read(bytes) != -1) {
+                sb.append(new String(bytes));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }catch (IOException e){
+            LOGGER.warn("read request byte is fail!",e);
         }
-        LOGGER.debug("=================parseRequest=================");
-        String parsedContent = sb.toString();
-        LOGGER.debug(parsedContent);
-        this.setUri(parsedContent);
+        LOGGER.info("read request info:");
+        String request = sb.toString();
+        LOGGER.info(request);
+        this.setUri(request);
     }
 
 

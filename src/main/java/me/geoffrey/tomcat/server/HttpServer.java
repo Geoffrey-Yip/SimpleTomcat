@@ -21,7 +21,7 @@ public class HttpServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpServer.class);
 
     public static final String WEB_PROJECT_ROOT = HttpServer.class.getClassLoader().getResource("").getPath().substring(1) + "webroot";
-    private static final String SHUTDOWN_SERVER = "SHUTDOWN-SERVER";
+    private static final String SHUTDOWN_SERVER = "/SHUTDOWN-SERVER";
     private transient boolean shutdowned = false;
 
     public static void main(String[] args) throws IOException {
@@ -34,16 +34,26 @@ public class HttpServer {
 
         while (!shutdowned) {
             Socket accept = serverSocket.accept();
-            InputStream inputStream = accept.getInputStream();
-            OutputStream outputStream = accept.getOutputStream();
-            Request request = new Request(inputStream);
-            if (request.getUri() != null && !"".equals(request.getUri().trim())) {
-                Response resp = new Response(outputStream, request);
-                resp.accessStaticResources();
-            }
-            outputStream.close();
-            inputStream.close();
-            accept.close();
+            new Thread(()->{
+                try{
+                    InputStream inputStream = accept.getInputStream();
+                    OutputStream outputStream = accept.getOutputStream();
+                    Request request = new Request();
+                    request.setRequestStream(inputStream);
+                    request.parseRequest();
+                    Response resp = new Response(outputStream, request);
+                    resp.accessStaticResources();
+                    shutdowned = SHUTDOWN_SERVER.equals(request.getUri());
+                }catch (IOException e){
+                    e.printStackTrace();
+                }finally {
+                    try {
+                        accept.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
         }
         serverSocket.close();
     }

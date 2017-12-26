@@ -1,6 +1,7 @@
 package me.geoffrey.tomcat.server.carrier;
 
 import me.geoffrey.tomcat.server.HttpServer;
+import me.geoffrey.tomcat.server.util.ArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,25 +26,24 @@ public class Response {
         this.request = request;
     }
 
-    public void accessStaticResources() throws IOException{
-        LOGGER.info("{},{}",HttpServer.WEB_PROJECT_ROOT,request.getUri());
-        File staticResource = new File(HttpServer.WEB_PROJECT_ROOT+request.getUri());
-        if(staticResource.exists()&&staticResource.isFile()){
-            byte[] cache = new byte[8096];
-            FileInputStream in = new FileInputStream(staticResource);
-            int read = in.read(cache, 0, 8096);
-            StringBuilder sb = new StringBuilder();
-            while (read != -1) {
-                sb.append(new String(cache));
-                outputStream.write(cache,0,read);
-                read = in.read(cache, 0, 8096);
-            }
-            LOGGER.info("output====");
-            LOGGER.info(sb.toString());
-            outputStream.flush();
+    public void accessStaticResources() throws IOException {
+        LOGGER.info("{},{}", HttpServer.WEB_PROJECT_ROOT, request.getUri());
+        File staticResource = new File(HttpServer.WEB_PROJECT_ROOT + request.getUri());
+        if (!staticResource.exists() || !staticResource.isFile()) {
+            return;
         }
+        byte[] cache = ArrayUtil.generatorCache();
+        FileInputStream fis = new FileInputStream(staticResource);
+        int read = fis.read(cache, 0, ArrayUtil.BUFFER_SIE);
+        StringBuilder sb = new StringBuilder();
+        while (read != -1) {
+            sb.append(new String(cache));
+            outputStream.write(cache, 0, read);
+            read = fis.read(cache, 0, ArrayUtil.BUFFER_SIE);
+        }
+        LOGGER.info("output====");
+        LOGGER.info(sb.toString());
+        fis.close();
     }
-
-
 
 }
