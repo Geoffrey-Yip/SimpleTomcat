@@ -20,6 +20,12 @@ public class Response {
 
     private OutputStream outputStream;
     private Request request;
+    private static final String message = "HTTP/1.1 404 File Not Found\r\n"+
+            "Content-Type:text/html\r\n"+
+            "Content-Length:23\r\n"+
+            "\r\n"+"<h1>404 not found!</h1>";
+    private static final String htmlMessage = "HTTP/1.1 200 OK\r\n"
+            +"Content-Type: text/html; charset=utf-8\r\n\r\n";
 
     public Response(OutputStream outputStream, Request request) {
         this.outputStream = outputStream;
@@ -30,20 +36,24 @@ public class Response {
         LOGGER.info("{},{}", HttpServer.WEB_PROJECT_ROOT, request.getUri());
         File staticResource = new File(HttpServer.WEB_PROJECT_ROOT + request.getUri());
         if (!staticResource.exists() || !staticResource.isFile()) {
-            return;
+            LOGGER.info("output====");
+            LOGGER.info(message);
+            outputStream.write(message.getBytes());
+        } else {
+            outputStream.write(htmlMessage.getBytes());
+            byte[] cache = ArrayUtil.generatorCache();
+            FileInputStream fis = new FileInputStream(staticResource);
+            int read = fis.read(cache, 0, ArrayUtil.BUFFER_SIZE);
+            StringBuilder sb = new StringBuilder();
+            while (read != -1) {
+                sb.append(new String(cache));
+                outputStream.write(cache, 0, read);
+                read = fis.read(cache, 0, ArrayUtil.BUFFER_SIZE);
+            }
+            LOGGER.info("output====");
+            LOGGER.info(sb.toString());
+            fis.close();
         }
-        byte[] cache = ArrayUtil.generatorCache();
-        FileInputStream fis = new FileInputStream(staticResource);
-        int read = fis.read(cache, 0, ArrayUtil.BUFFER_SIE);
-        StringBuilder sb = new StringBuilder();
-        while (read != -1) {
-            sb.append(new String(cache));
-            outputStream.write(cache, 0, read);
-            read = fis.read(cache, 0, ArrayUtil.BUFFER_SIE);
-        }
-        LOGGER.info("output====");
-        LOGGER.info(sb.toString());
-        fis.close();
     }
 
 }

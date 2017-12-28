@@ -11,6 +11,8 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
+import java.util.Optional;
 
 /**
  * @author Geoffrey.Yip
@@ -18,42 +20,52 @@ import java.net.Socket;
  * @Description Http服务类
  */
 public class HttpServer {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpServer.class);
 
-    public static final String WEB_PROJECT_ROOT = HttpServer.class.getClassLoader().getResource("").getPath().substring(1) + "webroot";
+
+    /**
+     * 用户自定义web项目的相对路径
+     */
+    public static final String WEB_PROJECT_ROOT;
+
     private static final String SHUTDOWN_SERVER = "/SHUTDOWN-SERVER";
+
     private transient boolean shutdowned = false;
+
+    static{
+        URL webrootURL = HttpServer.class.getClassLoader().getResource("webroot");
+        WEB_PROJECT_ROOT = Optional.ofNullable(webrootURL)
+                .orElseThrow(() ->
+                        new IllegalStateException("项目不存在")
+                ).getFile().substring(1);
+    }
 
     public static void main(String[] args) throws IOException {
         LOGGER.info("server start...");
         new HttpServer().await();
     }
 
-    private void await() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(8080, 10, InetAddress.getByName("127.0.0.1"));
+    public void await() throws IOException {
+        ServerSocket serverSocket = new ServerSocket(8080, 1, InetAddress.getByName("127.0.0.1"));
 
         while (!shutdowned) {
-            Socket accept = serverSocket.accept();
-            new Thread(()->{
-                try{
-                    InputStream inputStream = accept.getInputStream();
-                    OutputStream outputStream = accept.getOutputStream();
-                    Request request = new Request();
-                    request.setRequestStream(inputStream);
-                    request.parseRequest();
-                    Response resp = new Response(outputStream, request);
-                    resp.accessStaticResources();
-                    shutdowned = SHUTDOWN_SERVER.equals(request.getUri());
-                }catch (IOException e){
-                    e.printStackTrace();
-                }finally {
-                    try {
-                        accept.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+            Socket accept = null;
+            InputStream inputStream = null;
+            OutputStream outputStream = null;
+            try {
+                accept = serverSocket.accept();
+                inputStream = accept.getInputStream();
+                outputStream = accept.getOutputStream();
+                Request request = new Request();
+                request.setRequestStream(inputStream);
+                request.parseRequest();
+                Response resp = new Response(outputStream, request);
+                resp.accessStaticResources();
+                shutdowned = SHUTDOWN_SERVER.equals(request.getUri());
+            } finally {
+                accept.close();
+            }
         }
         serverSocket.close();
     }

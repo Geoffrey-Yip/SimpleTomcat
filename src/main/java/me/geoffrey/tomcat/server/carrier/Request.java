@@ -42,19 +42,21 @@ public class Request {
     }
 
     public void parseRequest() {
-        byte[] bytes = ArrayUtil.generatorCache();
-        StringBuilder sb = new StringBuilder();
-        try{
-            while (requestStream.read(bytes) != -1) {
-                sb.append(new String(bytes));
-            }
-        }catch (IOException e){
-            LOGGER.warn("read request byte is fail!",e);
+        // Read a set of characters from the socket
+        StringBuilder request = new StringBuilder();
+        int i;
+        byte[] buffer = ArrayUtil.generatorCache();
+        try {
+            i = requestStream.read(buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            i = -1;
         }
-        LOGGER.info("read request info:");
-        String request = sb.toString();
-        LOGGER.info(request);
-        this.setUri(request);
+        for (int j = 0; j < i; j++) {
+            request.append((char) buffer[j]);
+        }
+        System.out.print(request.toString());
+        this.setUri(request.toString());
     }
 
 
