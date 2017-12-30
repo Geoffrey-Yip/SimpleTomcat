@@ -1,6 +1,8 @@
 package me.geoffrey.tomcat.server.carrier;
 
 import me.geoffrey.tomcat.server.HttpServer;
+import me.geoffrey.tomcat.server.constant.HttpVersionConstant;
+import me.geoffrey.tomcat.server.enums.HttpStatusEnum;
 import me.geoffrey.tomcat.server.util.ArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,44 +18,64 @@ import java.io.OutputStream;
  * @description http响应载体
  */
 public class Response {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(Response.class);
 
     private OutputStream outputStream;
     private Request request;
-    private static final String message = "HTTP/1.1 404 File Not Found\r\n"+
-            "Content-Type:text/html\r\n"+
-            "Content-Length:23\r\n"+
-            "\r\n"+"<h1>404 not found!</h1>";
-    private static final String htmlMessage = "HTTP/1.1 200 OK\r\n"
-            +"Content-Type: text/html; charset=utf-8\r\n\r\n";
+
+    public void accessStaticResources() throws IOException {
+        //根据请求URI找到用户对应请求的资源文件
+        File staticResource = new File(HttpServer.WEB_PROJECT_ROOT + request.getUri());
+        //资源存在
+        if (staticResource.exists() && staticResource.isFile()) {
+            outputStream.write(responseToByte(HttpStatusEnum.OK));
+            write(staticResource);
+        //资源不存在
+        } else {
+            staticResource = new File(HttpServer.WEB_PROJECT_ROOT + "/404.html");
+            outputStream.write(responseToByte(HttpStatusEnum.NOT_FOUND));
+            write(staticResource);
+        }
+    }
+
+    /**
+     * 将读取到的资源文件输出
+     * @param file 读取到的文件
+     * @throws IOException IOException
+     */
+    private void write(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] cache = ArrayUtil.generatorCache();
+            int read;
+            while ((read = fis.read(cache, 0, ArrayUtil.BUFFER_SIZE)) != -1) {
+                outputStream.write(cache, 0, read);
+            }
+        }
+    }
+
+    /**
+     * 将请求行 请求头转换为byte数组
+     * @param status
+     * @return
+     */
+    private byte[] responseToByte(HttpStatusEnum status) {
+        return new StringBuilder().append(HttpVersionConstant.HTTP_1_1).append(" ")
+                .append(status.getStatus()).append(" ")
+                .append(status.getDesc()).append("\r\n\r\n")
+                .toString().getBytes();
+    }
 
     public Response(OutputStream outputStream, Request request) {
         this.outputStream = outputStream;
         this.request = request;
     }
 
-    public void accessStaticResources() throws IOException {
-        LOGGER.info("{},{}", HttpServer.WEB_PROJECT_ROOT, request.getUri());
-        File staticResource = new File(HttpServer.WEB_PROJECT_ROOT + request.getUri());
-        if (!staticResource.exists() || !staticResource.isFile()) {
-            LOGGER.info("output====");
-            LOGGER.info(message);
-            outputStream.write(message.getBytes());
-        } else {
-            outputStream.write(htmlMessage.getBytes());
-            byte[] cache = ArrayUtil.generatorCache();
-            FileInputStream fis = new FileInputStream(staticResource);
-            int read = fis.read(cache, 0, ArrayUtil.BUFFER_SIZE);
-            StringBuilder sb = new StringBuilder();
-            while (read != -1) {
-                sb.append(new String(cache));
-                outputStream.write(cache, 0, read);
-                read = fis.read(cache, 0, ArrayUtil.BUFFER_SIZE);
-            }
-            LOGGER.info("output====");
-            LOGGER.info(sb.toString());
-            fis.close();
-        }
+    public OutputStream getOutputStream() {
+        return outputStream;
     }
 
+    public Request getRequest() {
+        return request;
+    }
 }
