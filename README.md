@@ -1,6 +1,7 @@
 # Tomcat简易版 V1.0
 ## 项目介绍 
-    基于《how tomcat works》(中文版:《深入剖析Tomcat》)每个章节的内容（ZAO LU ZI）
+    基于《how tomcat works》(中文版:《深入剖析Tomcat》)每个章节的内容（ZAO LUN ZI）
+    本版本实现了最基本的HTML等静态资源文件的server容器
 ## 快速开始
     1. 将所需要使用的静态HTML文件放入resources/webroot/路径下
     2. 运行HttpServer.main()方法启动服务
