@@ -7,17 +7,17 @@ import me.geoffrey.tomcat.server.util.ArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletResponse;
+import java.io.*;
+import java.util.Locale;
 
 /**
  * @author Geoffrey.Yip
  * @time 2017/12/25 22:57
  * @description http响应载体
  */
-public class Response {
+public class Response implements ServletResponse {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Response.class);
 
@@ -30,21 +30,22 @@ public class Response {
         //资源存在
         if (staticResource.exists() && staticResource.isFile()) {
             outputStream.write(responseToByte(HttpStatusEnum.OK));
-            write(staticResource);
-        //资源不存在
+            writeFile(staticResource);
+            //资源不存在
         } else {
             staticResource = new File(HttpServer.WEB_PROJECT_ROOT + "/404.html");
             outputStream.write(responseToByte(HttpStatusEnum.NOT_FOUND));
-            write(staticResource);
+            writeFile(staticResource);
         }
     }
 
     /**
      * 将读取到的资源文件输出
+     *
      * @param file 读取到的文件
      * @throws IOException IOException
      */
-    private void write(File file) throws IOException {
+    private void writeFile(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] cache = ArrayUtil.generatorCache();
             int read;
@@ -56,10 +57,11 @@ public class Response {
 
     /**
      * 将请求行 请求头转换为byte数组
-     * @param status
-     * @return
+     *
+     * @param status 响应http状态
+     * @return 响应头byte数组
      */
-    private byte[] responseToByte(HttpStatusEnum status) {
+    public byte[] responseToByte(HttpStatusEnum status) {
         return new StringBuilder().append(HttpVersionConstant.HTTP_1_1).append(" ")
                 .append(status.getStatus()).append(" ")
                 .append(status.getDesc()).append("\r\n\r\n")
@@ -71,8 +73,80 @@ public class Response {
         this.request = request;
     }
 
-    public OutputStream getOutputStream() {
-        return outputStream;
+    @Override
+    public String getCharacterEncoding() {
+        return null;
+    }
+
+    @Override
+    public String getContentType() {
+        return null;
+    }
+
+    @Override
+    public ServletOutputStream getOutputStream() throws IOException {
+        return null;
+    }
+
+    @Override
+    public PrintWriter getWriter() throws IOException {
+        PrintWriter writer = new PrintWriter(outputStream,true);
+        return writer;
+    }
+
+    @Override
+    public void setCharacterEncoding(String charset) {
+
+    }
+
+    @Override
+    public void setContentLength(int len) {
+
+    }
+
+    @Override
+    public void setContentType(String type) {
+
+    }
+
+    @Override
+    public void setBufferSize(int size) {
+
+    }
+
+    @Override
+    public int getBufferSize() {
+        return 0;
+    }
+
+    @Override
+    public void flushBuffer() throws IOException {
+
+    }
+
+    @Override
+    public void resetBuffer() {
+
+    }
+
+    @Override
+    public boolean isCommitted() {
+        return false;
+    }
+
+    @Override
+    public void reset() {
+
+    }
+
+    @Override
+    public void setLocale(Locale loc) {
+
+    }
+
+    @Override
+    public Locale getLocale() {
+        return null;
     }
 
     public Request getRequest() {

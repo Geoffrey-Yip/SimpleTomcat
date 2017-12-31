@@ -2,6 +2,8 @@ package me.geoffrey.tomcat.server;
 
 import me.geoffrey.tomcat.server.carrier.Request;
 import me.geoffrey.tomcat.server.carrier.Response;
+import me.geoffrey.tomcat.server.process.ServletProcess;
+import me.geoffrey.tomcat.server.process.StaticResourceProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,8 +18,8 @@ import java.util.Optional;
 
 /**
  * @author Geoffrey.Yip
- * @Time 2017/12/25 22:38
- * @Description Http服务类
+ * @time 2017/12/25 22:38
+ * @description Http服务类
  */
 public class HttpServer {
 
@@ -69,8 +71,13 @@ public class HttpServer {
                 request.setRequestStream(inputStream);
                 request.parseRequest();
                 //生成相应的响应
-                Response resp = new Response(outputStream, request);
-                resp.accessStaticResources();
+                Response response = new Response(outputStream, request);
+
+                if (Optional.ofNullable(request.getUri()).orElse("").startsWith("/servlet/")) {
+                    new ServletProcess().process(request, response);
+                } else {
+                    new StaticResourceProcess().process(request, response);
+                }
                 //如果本次请求是关闭服务器则修改标识为关闭
                 shutdowned = SHUTDOWN_SERVER.equals(request.getUri());
             } catch (IOException e) {
