@@ -1,11 +1,14 @@
-package me.geoffrey.tomcat.server.carrier.facade;
+package me.geoffrey.tomcat.server.http.carrier.facade;
 
-import me.geoffrey.tomcat.server.carrier.Request;
+import me.geoffrey.tomcat.server.http.carrier.HttpRequest;
 
 import javax.servlet.*;
+import javax.servlet.http.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.security.Principal;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
@@ -15,12 +18,12 @@ import java.util.Map;
  * @time 2017/12/31 0:27
  * @description Request的外观类
  */
-public class RequestFacade implements ServletRequest{
+public class HttpRequestFacade implements HttpServletRequest {
 
     /**内部的Request对象**/
-    private Request request;
+    private HttpRequest request;
 
-    public RequestFacade(Request request) {
+    public HttpRequestFacade(HttpRequest request) {
         this.request = request;
     }
 
@@ -203,5 +206,155 @@ public class RequestFacade implements ServletRequest{
     @Override
     public DispatcherType getDispatcherType() {
         return request.getDispatcherType();
+    }
+
+    @Override
+    public String getAuthType() {
+        return request.getAuthType();
+    }
+
+    @Override
+    public Cookie[] getCookies() {
+        return request.getCookies();
+    }
+
+    @Override
+    public long getDateHeader(String name) {
+        return request.getDateHeader(name);
+    }
+
+    @Override
+    public String getHeader(String name) {
+        return request.getHeader(name);
+    }
+
+    @Override
+    public Enumeration<String> getHeaders(String name) {
+        return request.getHeaders(name);
+    }
+
+    @Override
+    public Enumeration<String> getHeaderNames() {
+        return request.getHeaderNames();
+    }
+
+    @Override
+    public int getIntHeader(String name) {
+        return request.getIntHeader(name);
+    }
+
+    @Override
+    public String getMethod() {
+        return request.getMethod();
+    }
+
+    @Override
+    public String getPathInfo() {
+        return request.getPathInfo();
+    }
+
+    @Override
+    public String getPathTranslated() {
+        return request.getPathTranslated();
+    }
+
+    @Override
+    public String getContextPath() {
+        return request.getContextPath();
+    }
+
+    @Override
+    public String getQueryString() {
+        return request.getQueryString();
+    }
+
+    @Override
+    public String getRemoteUser() {
+        return request.getRemoteUser();
+    }
+
+    @Override
+    public boolean isUserInRole(String role) {
+        return request.isUserInRole(role);
+    }
+
+    @Override
+    public Principal getUserPrincipal() {
+        return request.getUserPrincipal();
+    }
+
+    @Override
+    public String getRequestedSessionId() {
+        return request.getRequestedSessionId();
+    }
+
+    @Override
+    public String getRequestURI() {
+        return request.getRequestURI();
+    }
+
+    @Override
+    public StringBuffer getRequestURL() {
+        return request.getRequestURL();
+    }
+
+    @Override
+    public String getServletPath() {
+        return request.getServletPath();
+    }
+
+    @Override
+    public HttpSession getSession(boolean create) {
+        return request.getSession(create);
+    }
+
+    @Override
+    public HttpSession getSession() {
+        return request.getSession();
+    }
+
+    @Override
+    public boolean isRequestedSessionIdValid() {
+        return request.isRequestedSessionIdValid();
+    }
+
+    @Override
+    public boolean isRequestedSessionIdFromCookie() {
+        return request.isRequestedSessionIdFromCookie();
+    }
+
+    @Override
+    public boolean isRequestedSessionIdFromURL() {
+        return request.isRequestedSessionIdFromURL();
+    }
+
+    @Override
+    public boolean isRequestedSessionIdFromUrl() {
+        return request.isRequestedSessionIdFromUrl();
+    }
+
+    @Override
+    public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
+        return request.authenticate(response);
+    }
+
+    @Override
+    public void login(String username, String password) throws ServletException {
+        request.login(username,password);
+    }
+
+    @Override
+    public void logout() throws ServletException {
+        request.logout();
+    }
+
+    @Override
+    public Collection<Part> getParts() throws IOException, ServletException {
+        return request.getParts();
+    }
+
+    @Override
+    public Part getPart(String name) throws IOException, ServletException {
+        return request.getPart(name);
     }
 }

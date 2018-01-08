@@ -1,4 +1,4 @@
-# Tomcat简易版 V1.0
+# Tomcat简易版 V3.0
 ## 项目介绍 
     基于《how tomcat works》(中文版:《深入剖析Tomcat》)每个章节的内容（ZAO LUN ZI）
     本版本实现了一个简单的Servlet的容器

@@ -16,7 +16,7 @@ public class ClientTest {
     public static void main(String[] args)throws Exception{
         Socket socket = new Socket("127.0.0.1",8080);
         OutputStream outputStream = socket.getOutputStream();
-        outputStream.write("GET /index.html HTTP/1.1".getBytes());
+        outputStream.write("GET /servlet/RegisterServlet HTTP/1.1".getBytes());
         socket.shutdownOutput();
         InputStream inputStream = socket.getInputStream();
         BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);

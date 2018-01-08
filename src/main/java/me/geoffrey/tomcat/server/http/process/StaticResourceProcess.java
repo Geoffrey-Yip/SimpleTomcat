@@ -1,7 +1,7 @@
-package me.geoffrey.tomcat.server.process;
+package me.geoffrey.tomcat.server.http.process;
 
-import me.geoffrey.tomcat.server.carrier.Request;
-import me.geoffrey.tomcat.server.carrier.Response;
+import me.geoffrey.tomcat.server.http.carrier.HttpRequest;
+import me.geoffrey.tomcat.server.http.carrier.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,7 @@ public class StaticResourceProcess {
      * @param response response
      * @throws IOException IO异常
      */
-    public void process(Request request, Response response) throws IOException {
+    public void process(HttpRequest request, HttpResponse response) throws IOException {
         LOGGER.debug("Start Process static resource...");
         response.accessStaticResources();
     }

@@ -1,11 +1,11 @@
-package me.geoffrey.tomcat.server.process;
+package me.geoffrey.tomcat.server.http.process;
 
-import me.geoffrey.tomcat.server.HttpServer;
-import me.geoffrey.tomcat.server.carrier.Request;
-import me.geoffrey.tomcat.server.carrier.Response;
-import me.geoffrey.tomcat.server.carrier.facade.RequestFacade;
-import me.geoffrey.tomcat.server.carrier.facade.ResponseFacade;
+import me.geoffrey.tomcat.server.connector.HttpConnector;
 import me.geoffrey.tomcat.server.enums.HttpStatusEnum;
+import me.geoffrey.tomcat.server.http.carrier.HttpRequest;
+import me.geoffrey.tomcat.server.http.carrier.HttpResponse;
+import me.geoffrey.tomcat.server.http.carrier.facade.HttpRequestFacade;
+import me.geoffrey.tomcat.server.http.carrier.facade.HttpResponseFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,7 @@ public class ServletProcess {
 
     static {
         try {
-            URL servletClassPath = new File(HttpServer.WEB_PROJECT_ROOT, "servlet").toURI().toURL();
+            URL servletClassPath = new File(HttpConnector.WEB_PROJECT_ROOT, "servlet").toURI().toURL();
             URL_CLASS_LOADER = new URLClassLoader(new URL[]{servletClassPath});
         } catch (Exception e) {
             LOGGER.warn("initialized servlet classloader is fail!", e);
@@ -41,18 +41,19 @@ public class ServletProcess {
 
     /**
      * 根据Request执行相应的Servlet
+     *
      * @param request  request对象
      * @param response response对象
      */
-    public void process(Request request, Response response) throws IOException {
+    public void process(HttpRequest request, HttpResponse response) throws IOException {
         //根据请求的URI截取Servlet的名字
-        String servletName = this.parseServletName(request.getUri());
+        String servletName = this.parseServletName(request.getRequestURI());
         //使用URLClassLoader加载这个Servlet
         Class servletClass;
         try {
             servletClass = URL_CLASS_LOADER.loadClass(servletName);
         } catch (ClassNotFoundException e) {
-            LOGGER.info("servlet {} not found!",servletName);
+            LOGGER.info("servlet {} not found!", servletName);
             //实例化失败则调用404页面
             response.accessStaticResources();
             return;
@@ -60,10 +61,11 @@ public class ServletProcess {
         try {
             //实例化这个Servlet
             Servlet servlet = (Servlet) servletClass.newInstance();
-            response.getWriter().println(new String(response.responseToByte(HttpStatusEnum.OK)));
-            servlet.service(new RequestFacade(request), new ResponseFacade(response));
+            response.getWriter().print(new String(response.responseToByte(HttpStatusEnum.OK)));
+            servlet.service(new HttpRequestFacade(request), new HttpResponseFacade(response));
+            response.finishResponse();
         } catch (Exception e) {
-            LOGGER.info("Invoke Servlet {} is fail!", servletName);
+            LOGGER.info(String.format("Invoke Servlet %s is fail!", servletName), e);
         }
     }
 

@@ -1,6 +1,6 @@
-package me.geoffrey.tomcat.server.carrier;
+package me.geoffrey.tomcat.server.http.carrier;
 
-import me.geoffrey.tomcat.server.HttpServer;
+import me.geoffrey.tomcat.server.connector.HttpConnector;
 import me.geoffrey.tomcat.server.constant.HttpVersionConstant;
 import me.geoffrey.tomcat.server.enums.HttpStatusEnum;
 import me.geoffrey.tomcat.server.util.ArrayUtil;
@@ -8,8 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.util.Collection;
 import java.util.Locale;
 
 /**
@@ -17,23 +19,28 @@ import java.util.Locale;
  * @time 2017/12/25 22:57
  * @description http响应载体
  */
-public class Response implements ServletResponse {
+public class HttpResponse implements HttpServletResponse {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Response.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpResponse.class);
 
+    protected byte[] buffer = new byte[ArrayUtil.BUFFER_SIZE];
+    protected int bufferCount = 0;
     private OutputStream outputStream;
-    private Request request;
+    private HttpRequest request;
+    private PrintWriter writer;
+    protected int contentCount = 0;
+
 
     public void accessStaticResources() throws IOException {
         //根据请求URI找到用户对应请求的资源文件
-        File staticResource = new File(HttpServer.WEB_PROJECT_ROOT + request.getUri());
+        File staticResource = new File(HttpConnector.WEB_PROJECT_ROOT + request.getRequestURI());
         //资源存在
         if (staticResource.exists() && staticResource.isFile()) {
             outputStream.write(responseToByte(HttpStatusEnum.OK));
             writeFile(staticResource);
             //资源不存在
         } else {
-            staticResource = new File(HttpServer.WEB_PROJECT_ROOT + "/404.html");
+            staticResource = new File(HttpConnector.WEB_PROJECT_ROOT + "/404.html");
             outputStream.write(responseToByte(HttpStatusEnum.NOT_FOUND));
             writeFile(staticResource);
         }
@@ -68,14 +75,14 @@ public class Response implements ServletResponse {
                 .toString().getBytes();
     }
 
-    public Response(OutputStream outputStream, Request request) {
+    public HttpResponse(OutputStream outputStream, HttpRequest request) {
         this.outputStream = outputStream;
         this.request = request;
     }
 
     @Override
     public String getCharacterEncoding() {
-        return null;
+        return "ISO-8859-1";
     }
 
     @Override
@@ -90,8 +97,10 @@ public class Response implements ServletResponse {
 
     @Override
     public PrintWriter getWriter() throws IOException {
-        PrintWriter writer = new PrintWriter(outputStream,true);
-        return writer;
+        if (writer != null) {
+            return writer;
+        }
+        return (writer = new PrintWriter(outputStream));
     }
 
     @Override
@@ -149,7 +158,121 @@ public class Response implements ServletResponse {
         return null;
     }
 
-    public Request getRequest() {
+    public HttpRequest getRequest() {
         return request;
+    }
+
+    @Override
+    public void addCookie(Cookie cookie) {
+
+    }
+
+    @Override
+    public boolean containsHeader(String name) {
+        return false;
+    }
+
+    @Override
+    public String encodeURL(String url) {
+        return null;
+    }
+
+    @Override
+    public String encodeRedirectURL(String url) {
+        return null;
+    }
+
+    @Override
+    public String encodeUrl(String url) {
+        return null;
+    }
+
+    @Override
+    public String encodeRedirectUrl(String url) {
+        return null;
+    }
+
+    @Override
+    public void sendError(int sc, String msg) throws IOException {
+
+    }
+
+    @Override
+    public void sendError(int sc) throws IOException {
+
+    }
+
+    @Override
+    public void sendRedirect(String location) throws IOException {
+
+    }
+
+    @Override
+    public void setDateHeader(String name, long date) {
+
+    }
+
+    @Override
+    public void addDateHeader(String name, long date) {
+
+    }
+
+    @Override
+    public void setHeader(String name, String value) {
+
+    }
+
+    @Override
+    public void addHeader(String name, String value) {
+
+    }
+
+    @Override
+    public void setIntHeader(String name, int value) {
+
+    }
+
+    @Override
+    public void addIntHeader(String name, int value) {
+
+    }
+
+    @Override
+    public void setStatus(int sc) {
+
+    }
+
+    @Override
+    public void setStatus(int sc, String sm) {
+
+    }
+
+    @Override
+    public int getStatus() {
+        return 0;
+    }
+
+    @Override
+    public String getHeader(String name) {
+        return null;
+    }
+
+    @Override
+    public Collection<String> getHeaders(String name) {
+        return null;
+    }
+
+    @Override
+    public Collection<String> getHeaderNames() {
+        return null;
+    }
+
+    public void finishResponse() {
+        // sendHeaders();
+        // Flush and close the appropriate output mechanism
+        if (writer != null) {
+            writer.flush();
+            writer.close();
+        }
     }
 }
