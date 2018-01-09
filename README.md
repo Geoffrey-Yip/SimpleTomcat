@@ -19,7 +19,7 @@
     4. 打开浏览器输入127.0.0.1:8080/{你的资源文件}即可访问静态HTML资源
     5. 打开浏览器输入127.0.0.1:8080/servlet/{你的serlvet名称}即可访问自定义Servlet
 ## 运行流程
-![process](https://github.com/dnhxm/SimpleTomcat/tree/master/src/main/resources/webroot/image/version3Process.png)
+![](https://github.com/dnhxm/SimpleTomcat/tree/master/src/main/resources/webroot/image/version3Process.png)
 ## 运行环境
     - java 8
     - maven 3.0+
