@@ -13,14 +13,18 @@
     1.运行Bootstrap#main()启动服务
     2.浏览器输入127.0.0.1:8080/register.html
     3.输入注册账号密码，即可看到控制台输出执行RegisterServlet的消息。
+    
 ## 快速开始
     1. 将所需要使用的静态HTML文件放入resources/webroot/路径下
     2. 编写简单的Servlet(继承HttpServlet类)，编译成class文件后拷贝到resources/webroot/servlet/路径下
     3. 运行Bootstrap#main()启动服务
     4. 打开浏览器输入127.0.0.1:8080/{你的资源文件}即可访问静态HTML资源
     5. 打开浏览器输入127.0.0.1:8080/servlet/{你的serlvet名称}即可访问自定义Servlet
+    
 ## 运行流程
+
 ![process](https://github.com/dnhxm/SimpleTomcat/tree/master/src/main/resources/webroot/image/version3Process.png)
+
 ## 运行环境
     - java 8
     - maven 3.0+
