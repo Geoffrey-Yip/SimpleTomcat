@@ -10,11 +10,13 @@
 实现过程： [跟我一起动手实现Tomcat（三）:解析Request请求参数、请求头、cookie](https://juejin.im/post/5a49ca76f265da4328413499)
 
 ##体验DEMO
+
     1.运行Bootstrap#main()启动服务
     2.浏览器输入127.0.0.1:8080/register.html
     3.输入注册账号密码，即可看到控制台输出执行RegisterServlet的消息。
     
 ## 快速开始
+
     1. 将所需要使用的静态HTML文件放入resources/webroot/路径下
     2. 编写简单的Servlet(继承HttpServlet类)，编译成class文件后拷贝到resources/webroot/servlet/路径下
     3. 运行Bootstrap#main()启动服务
