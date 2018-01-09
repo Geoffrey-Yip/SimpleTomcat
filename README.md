@@ -7,7 +7,7 @@
 - 能够解析parameter/header/cookie等信息。
 - Session or Servlet init()/destory()等功能也会在以后的版本实现。
 
-实现过程： [跟我一起动手实现Tomcat（二）:实现简单的Servlet容器](https://juejin.im/post/5a49ca76f265da4328413499)
+实现过程： [跟我一起动手实现Tomcat（三）:解析Request请求参数、请求头、cookie](https://juejin.im/post/5a49ca76f265da4328413499)
 ##体验DEMO
     1.运行Bootstrap#main()启动服务
     2.浏览器输入127.0.0.1:8080/register.html
@@ -19,7 +19,7 @@
     4. 打开浏览器输入127.0.0.1:8080/{你的资源文件}即可访问静态HTML资源
     5. 打开浏览器输入127.0.0.1:8080/servlet/{你的serlvet名称}即可访问自定义Servlet
 ## 运行流程
-![](https://user-gold-cdn.xitu.io/2018/1/1/160b09585e98fd22)
+![process](https://github.com/dnhxm/SimpleTomcat/tree/master/src/main/resources/webroot/image/version3Process.png)
 ## 运行环境
     - java 8
     - maven 3.0+
