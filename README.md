@@ -9,7 +9,7 @@
 
 实现过程： [跟我一起动手实现Tomcat（三）:解析Request请求参数、请求头、cookie](https://juejin.im/post/5a49ca76f265da4328413499)
 
-##体验DEMO
+## 体验DEMO
 
     1.运行Bootstrap#main()启动服务
     2.浏览器输入127.0.0.1:8080/register.html
