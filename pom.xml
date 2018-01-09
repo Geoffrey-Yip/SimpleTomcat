@@ -6,7 +6,7 @@
 
     <groupId>me.geoffrey</groupId>
     <artifactId>SimpleTomcat</artifactId>
-    <version>2.0</version>
+    <version>3.0</version>
 
     <dependencies>
         <dependency>

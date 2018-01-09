@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 /**
  * @author Geoffrey.Yip
  * @time 2018/1/1 12:58
- * @description
+ * @description HTTP请求头key枚举
  */
 public enum HTTPHeaderEnum {
 

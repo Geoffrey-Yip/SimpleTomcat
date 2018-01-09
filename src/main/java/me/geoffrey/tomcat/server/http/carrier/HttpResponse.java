@@ -23,13 +23,9 @@ public class HttpResponse implements HttpServletResponse {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpResponse.class);
 
-    protected byte[] buffer = new byte[ArrayUtil.BUFFER_SIZE];
-    protected int bufferCount = 0;
     private OutputStream outputStream;
     private HttpRequest request;
     private PrintWriter writer;
-    protected int contentCount = 0;
-
 
     public void accessStaticResources() throws IOException {
         //根据请求URI找到用户对应请求的资源文件

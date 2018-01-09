@@ -5,6 +5,7 @@ import me.geoffrey.tomcat.server.http.stream.RequestStream;
 import me.geoffrey.tomcat.server.util.Enumerator;
 import me.geoffrey.tomcat.server.util.ParameterMap;
 import me.geoffrey.tomcat.server.util.RequestUtil;
+import me.geoffrey.tomcat.server.util.StringUtil;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -19,39 +20,86 @@ import java.util.*;
 /**
  * @author Geoffrey.Yip
  * @time 2017/12/25 22:57
- * @description http请求载体
+ * @description http请求类
  */
 public class HttpRequest implements HttpServletRequest {
 
+    /**
+     * 请求内容类型
+     **/
     private String contentType;
+    /**
+     * 请求内容长度
+     **/
     private int contentLength;
+    /**
+     * Internet协议(IP)地址
+     **/
     private InetAddress inetAddress;
+    /**
+     * Socket客户端输入流
+     **/
     private InputStream input;
+    /**
+     * HTTP请求方法
+     **/
     private String method;
+    /**
+     * HTTP请求协议
+     **/
     private String protocol;
+    /**
+     * URI携带的查询参数
+     **/
     private String queryString;
+    /**
+     * POST请求表单参数
+     **/
+    private String postParams;
+    /**
+     * HTTP请求URI
+     **/
     private String requestURI;
+    /**
+     * 服务器名称
+     **/
     private String serverName;
+    /**
+     * 服务器端口
+     **/
     private int serverPort;
+    /**
+     * Socket客户端对象
+     **/
     private Socket socket;
+    /**
+     * jsessionid是否从cookie携带
+     **/
     private boolean requestedSessionCookie;
-    private String requestedSessionId;
+    /**
+     * jsessionid是否从URL携带
+     **/
     private boolean requestedSessionURL;
+    /**
+     * 携带的jsessionid
+     **/
+    private String requestedSessionId;
+
 
     /**
-     * The request attributes for this request.
+     * 这个请求的属性Map
      */
-    protected HashMap attributes = new HashMap();
+    protected HashMap<String, Object> attributes = new HashMap<>();
     /**
-     * The authorization credentials sent with this Request.
+     * 这个请求发送的授权凭据
      */
-    protected String authorization = null;
+    protected String authorization;
     /**
-     * The context path for this request.
+     * 这个请求的上下文路径
      */
     protected String contextPath = "";
     /**
-     * The set of cookies associated with this Request.
+     * 该请求关联的Cookie列表
      */
     protected ArrayList<Cookie> cookies = new ArrayList<>();
     /**
@@ -59,7 +107,7 @@ public class HttpRequest implements HttpServletRequest {
      */
     protected static ArrayList empty = new ArrayList();
     /**
-     * The set of SimpleDateFormat formats to use in getDateHeader().
+     * getDateHeader()方法中使用到的日期格式
      */
     protected SimpleDateFormat[] formats = {
             new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US),
@@ -79,38 +127,44 @@ public class HttpRequest implements HttpServletRequest {
     protected ParameterMap parameters;
 
     /**
-     * Have the parameters for this request been parsed yet?
+     * 标识本次请求的参数是否解析完毕
      */
     protected boolean parsed = false;
-    protected String pathInfo = null;
+    protected String pathInfo;
 
     /**
-     * The reader that has been returned by <code>getReader</code>, if any.
+     * Socket的InputStream的字符流版本
      */
-    protected BufferedReader reader = null;
+    protected BufferedReader reader;
 
     /**
-     * The ServletInputStream that has been returned by
-     * <code>getInputStream()</code>, if any.
+     * 封装的Socket InputStream (Servlet版本）
      */
-    protected ServletInputStream stream = null;
+    protected ServletInputStream stream;
 
+    /**
+     * 构造方法
+     **/
     public HttpRequest(InputStream input) {
         this.input = input;
     }
 
+
+    /**
+     * 添加请求头
+     *
+     * @param name  请求头key
+     * @param value 请求头内容
+     */
     public void addHeader(String name, String value) {
         name = name.toLowerCase();
-        synchronized (headers) {
-            ArrayList<String> values = headers.computeIfAbsent(name, k -> new ArrayList<>());
-            values.add(value);
-        }
+        ArrayList<String> values = headers.computeIfAbsent(name, k -> new ArrayList<>());
+        values.add(value);
     }
 
     /**
-     * Parse the parameters of this request, if it has not already occurred.
-     * If parameters are present in both the query string and the request
-     * content, they are merged.
+     * 如果本次请求参数并未解析，如果在URI和POST表单中都存在参数，
+     * 则将它们合并，最后放入ParameterMap中
      */
     protected void parseParameters() {
         if (parsed) {
@@ -123,18 +177,13 @@ public class HttpRequest implements HttpServletRequest {
         results.setLocked(false);
         String encoding = getCharacterEncoding();
         if (encoding == null) {
-            encoding = "ISO-8859-1";
+            encoding = StringUtil.ISO_8859_1;
         }
-
-        // Parse any parameters specified in the query string
+        // 解析URI携带的请求参数
         String queryString = getQueryString();
-        try {
-            RequestUtil.parseParameters(results, queryString, encoding);
-        } catch (UnsupportedEncodingException e) {
-            ;
-        }
+        RequestUtil.parseParameters(results, queryString, encoding);
 
-        // Parse any parameters specified in the input stream
+        // 初始化Content-Type的值
         String contentType = getContentType();
         if (contentType == null) {
             contentType = "";
@@ -145,48 +194,29 @@ public class HttpRequest implements HttpServletRequest {
         } else {
             contentType = contentType.trim();
         }
-        if (HTTPMethodEnum.POST.name().equals(getMethod()) && (getContentLength() > 0)
+        //解析POST请求的表单参数
+        if (HTTPMethodEnum.POST.name().equals(getMethod()) && getContentLength() > 0
                 && "application/x-www-form-urlencoded".equals(contentType)) {
-            try {
-                int max = getContentLength();
-                int len = 0;
-                byte[] buf = new byte[getContentLength()];
-                ServletInputStream is = getInputStream();
-                while (len < max) {
-                    int next = is.read(buf, len, max - len);
-                    if (next < 0) {
-                        break;
-                    }
-                    len += next;
-                }
-                is.close();
-                if (len < max) {
-                    throw new RuntimeException("Content length mismatch");
-                }
-                RequestUtil.parseParameters(results, buf, encoding);
-            } catch (UnsupportedEncodingException ue) {
-                ;
-            } catch (IOException e) {
-                throw new RuntimeException("Content read fail");
-            }
+            RequestUtil.parseParameters(results, getPostParams(), encoding);
         }
 
+        //解析完毕就锁定
         results.setLocked(true);
         parsed = true;
         parameters = results;
     }
 
+    /**
+     * 添加Cookie
+     *
+     * @param cookie 被添加的Cookie
+     */
     public void addCookie(Cookie cookie) {
-        synchronized (cookies) {
-            cookies.add(cookie);
-        }
+        cookies.add(cookie);
     }
 
     /**
-     * Create and return a ServletInputStream to read the content
-     * associated with this Request.  The default implementation creates an
-     * instance of RequestStream associated with this request, but this can
-     * be overridden if necessary.
+     * 创建一个输入流，是一个RequestStream包装的Socket  InputStream
      *
      * @throws IOException if an input/output error occurs
      */
@@ -239,18 +269,18 @@ public class HttpRequest implements HttpServletRequest {
     }
 
     /**
-     * Set the name of the server (virtual host) to process this request.
+     * 设置服务器的名称(虚拟主机)来处理这个请求。
      *
-     * @param name The server name
+     * @param name 虚拟主机名
      */
     public void setServerName(String name) {
         this.serverName = name;
     }
 
     /**
-     * Set the port number of the server to process this request.
+     * 设置服务器的端口号来处理这个请求。
      *
-     * @param port The server port
+     * @param port 服务器端口号
      */
     public void setServerPort(int port) {
         this.serverPort = port;
@@ -261,37 +291,41 @@ public class HttpRequest implements HttpServletRequest {
     }
 
     /**
-     * Set a flag indicating whether or not the requested session ID for this
-     * request came in through a cookie.  This is normally called by the
-     * HTTP Connector, when it parses the request headers.
+     * 设置本次请求的jsessionid是否为cookie携带传入
      *
-     * @param flag The new flag
+     * @param flag jsessionid是否为cookie携带传入
      */
     public void setRequestedSessionCookie(boolean flag) {
         this.requestedSessionCookie = flag;
     }
 
+    /**
+     * 设置本次请求的jsessionid
+     *
+     * @param requestedSessionId jsessionid
+     */
     public void setRequestedSessionId(String requestedSessionId) {
         this.requestedSessionId = requestedSessionId;
     }
 
+    /**
+     * 设置本次请求的jsessionid是否为URL携带传入
+     *
+     * @param flag jsessionid是否为URL携带传入
+     */
     public void setRequestedSessionURL(boolean flag) {
         requestedSessionURL = flag;
     }
 
-    /* implementation of the HttpServletRequest*/
+    /* 下面是实现HttpServletRequest的方法*/
     @Override
     public Object getAttribute(String name) {
-        synchronized (attributes) {
-            return (attributes.get(name));
-        }
+        return attributes.get(name);
     }
 
     @Override
-    public Enumeration getAttributeNames() {
-        synchronized (attributes) {
-            return (new Enumerator(attributes.keySet()));
-        }
+    public Enumeration<String> getAttributeNames() {
+        return new Enumerator<>(attributes.keySet());
     }
 
     @Override
@@ -347,36 +381,49 @@ public class HttpRequest implements HttpServletRequest {
         throw new IllegalArgumentException(value);
     }
 
+    /**
+     * 获取请求头值
+     *
+     * @param name 请求头名字
+     * @return 请求头值
+     */
     @Override
-    public String getHeader(String name) {
-        name = name.toLowerCase();
-        synchronized (headers) {
-            ArrayList<String> values = headers.get(name);
-            if (values != null) {
-                return values.get(0);
-            } else {
-                return null;
-            }
+    public synchronized String getHeader(String name) {
+        if (name != null) {
+            name = name.toLowerCase();
+        }
+        ArrayList<String> values = headers.get(name);
+        if (values != null) {
+            return values.get(0);
+        } else {
+            return null;
         }
     }
 
+    /**
+     * 获取所有请求头的名字集合
+     *
+     * @return 请求头名字集合
+     */
     @Override
     public Enumeration getHeaderNames() {
-        synchronized (headers) {
-            return (new Enumerator(headers.keySet()));
-        }
+        return new Enumerator<>(headers.keySet());
     }
 
+    /**
+     * 获取该请求头所有的值
+     *
+     * @param name 请求头名
+     * @return 请求头值集合
+     */
     @Override
-    public Enumeration getHeaders(String name) {
+    public Enumeration<String> getHeaders(String name) {
         name = name.toLowerCase();
-        synchronized (headers) {
-            ArrayList values = headers.get(name);
-            if (values != null) {
-                return new Enumerator(values);
-            } else {
-                return new Enumerator(empty);
-            }
+        ArrayList<String> values = headers.get(name);
+        if (values != null) {
+            return new Enumerator<>(values);
+        } else {
+            return new Enumerator<>(empty);
         }
     }
 
@@ -417,6 +464,12 @@ public class HttpRequest implements HttpServletRequest {
         return method;
     }
 
+    /**
+     * 获取请求参数
+     *
+     * @param name 参数名
+     * @return 参数内容
+     */
     @Override
     public String getParameter(String name) {
         parseParameters();
@@ -424,23 +477,32 @@ public class HttpRequest implements HttpServletRequest {
         return Optional.ofNullable(values).map(arr -> arr[0]).orElse(null);
     }
 
+    /**
+     * 获取储存请求参数的Map
+     *
+     * @return 请求参数的Map
+     */
     @Override
-    public Map getParameterMap() {
+    public Map<String, String[]> getParameterMap() {
         parseParameters();
-        return (this.parameters);
+        return this.parameters;
     }
 
+    /**
+     * 获取请求参数名集合
+     *
+     * @return 请求参数名集合
+     */
     @Override
-    public Enumeration getParameterNames() {
+    public Enumeration<String> getParameterNames() {
         parseParameters();
-        return (new Enumerator(parameters.keySet()));
+        return (new Enumerator<>(parameters.keySet()));
     }
 
     @Override
     public String[] getParameterValues(String name) {
         parseParameters();
-        String[] values = parameters.get(name);
-        return values;
+        return parameters.get(name);
     }
 
     @Override
@@ -684,5 +746,13 @@ public class HttpRequest implements HttpServletRequest {
 
     @Override
     public void setCharacterEncoding(String encoding) throws UnsupportedEncodingException {
+    }
+
+    public String getPostParams() {
+        return postParams;
+    }
+
+    public void setPostParams(String postParams) {
+        this.postParams = postParams;
     }
 }

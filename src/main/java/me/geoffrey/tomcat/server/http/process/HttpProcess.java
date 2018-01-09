@@ -2,8 +2,10 @@ package me.geoffrey.tomcat.server.http.process;
 
 import me.geoffrey.tomcat.server.connector.HttpConnector;
 import me.geoffrey.tomcat.server.constant.HttpConstant;
+import me.geoffrey.tomcat.server.enums.HTTPHeaderEnum;
 import me.geoffrey.tomcat.server.http.carrier.HttpRequest;
 import me.geoffrey.tomcat.server.http.carrier.HttpResponse;
+import me.geoffrey.tomcat.server.util.RequestUtil;
 import me.geoffrey.tomcat.server.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +17,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toCollection;
 
 /**
  * @author Geoffrey.Yip
@@ -41,8 +45,6 @@ public class HttpProcess {
      **/
     private HttpResponse response;
 
-    private InputStream input;
-    private OutputStream output;
 
     /**
      * 构造方法
@@ -59,15 +61,15 @@ public class HttpProcess {
      * @param socket 请求socket
      */
     public void process(Socket socket) throws IOException {
-        try {
-            input = socket.getInputStream();
-            output = socket.getOutputStream();
+
+        try (InputStream input = socket.getInputStream();
+             OutputStream output = socket.getOutputStream()) {
             //初始化request以及response
             request = new HttpRequest(input);
             response = new HttpResponse(output, request);
             //解析request请求和请求头
-            this.parseRequest();
-            this.parseHeaders();
+            this.parseRequest(input);
+            this.parseHeaders(input);
             //调用对应的处理器处理
             if (request.getRequestURI().startsWith(SERVLET_URI_START_WITH)) {
                 new ServletProcess().process(request, response);
@@ -76,19 +78,17 @@ public class HttpProcess {
             }
         } catch (ServletException e) {
             LOGGER.info("Catch ServletException from Socket process :", e);
-        } finally {
-            if (output != null) {
-                output.close();
-            }
-            if (input != null) {
-                input.close();
-            }
         }
-
     }
 
 
-    private void parseRequest() throws IOException, ServletException {
+    /**
+     * 解析请求行和校验URI安全性
+     * @param input socket输入流
+     * @throws IOException 流错误
+     * @throws ServletException 读取到的请求行有误
+     */
+    private void parseRequest(InputStream input) throws IOException, ServletException {
         StringBuilder temp = new StringBuilder();
         int cache;
         while ((cache = input.read()) != -1) {
@@ -100,7 +100,7 @@ public class HttpProcess {
         }
         String[] requestLineArray = temp.toString().split(" ");
         if (requestLineArray.length < 3) {
-            return;
+            throw new ServletException("HTTP request line is not standard！");
         }
         // 填充request的URI和方法信息
         request.setMethod(requestLineArray[0]);
@@ -149,48 +149,55 @@ public class HttpProcess {
         }
 
         //校验URI有没有不符合规范或者不正常的地方，修正
-        String normalizedUri = this.normalize(uri);
+        String normalizedUri = RequestUtil.normalize(uri);
         if (normalizedUri == null) {
             throw new ServletException("Invalid URI: " + uri + "'");
         }
         request.setRequestURI(normalizedUri);
     }
 
-    private void parseHeaders() throws IOException, ServletException {
-        //存储请求头key、value的链表集合
-        LinkedList<String> headers = new LinkedList<>();
-        //单次读取字节缓存
-        int cache;
-        //字符串缓存
+    /**
+     * 解析HTTP请求头
+     * @param input socket输入流
+     * @throws IOException 读取出错
+     */
+    private void parseHeaders(InputStream input) throws IOException {
         StringBuilder sb = new StringBuilder();
-        while ((cache = input.read()) != -1) {
-            //遇到\r\n时读取下一个内容
-            if (this.isLine(HttpConstant.CARRIAGE_RETURN, HttpConstant.LINE_FEED, headers, sb, cache)) {
-                //重置字符串缓存
-                sb = new StringBuilder();
-                //遇到‘:’‘ ’时也读取下一个内容
-            } else if (this.isLine(HttpConstant.COLON, HttpConstant.SPACE, headers, sb, cache)) {
-                sb = new StringBuilder();
-                //否则就拼接到缓存中
-            } else {
-                sb.append((char) cache);
-            }
+        int cache;
+        while (input.available() > 0 && (cache = input.read()) > -1) {
+            sb.append((char) cache);
         }
-        while (headers.size() % 2 == 0 && !headers.isEmpty()) {
-            //相邻的两个为一对
-            request.addHeader(headers.pollFirst(), headers.pollFirst());
+        //使用\r\n分割请求头
+        Queue<String> headers = Stream.of(sb.toString().split("\r\n")).collect(toCollection(LinkedList::new));
+        //获取一个请求头
+        while (!headers.isEmpty()) {
+            String headerString = headers.poll();
+            //读取到空行则说明请求头已读取完毕
+            if (StringUtil.isBlank(headerString)) {
+                break;
+            }
+            //分割请求头的key和value
+            String[] headerKeyValue = headerString.split(": ");
+            request.addHeader(headerKeyValue[0], headerKeyValue[1]);
         }
 
-        String contentLength = request.getHeader("content-length");
+        //如果在读取到空行后还有数据，说明是POST请求的表单参数
+        if (!headers.isEmpty()) {
+            request.setPostParams(headers.poll());
+        }
+
+        //设置请求参数
+        String contentLength = request.getHeader(HTTPHeaderEnum.CONTENT_LENGTH.getDesc());
         if (contentLength != null) {
             request.setContentLength(Integer.parseInt(contentLength));
         }
-        request.setContentType(request.getHeader("content-type"));
+        request.setContentType(request.getHeader(HTTPHeaderEnum.CONTENT_TYPE.getDesc()));
+        request.setCharacterEncoding(RequestUtil.parseCharacterEncoding(request.getHeader(request.getContentType())));
 
-        Cookie[] cookies = parseCookieHeader(request.getHeader("cookie"));
-        Optional.ofNullable(cookies).ifPresent(cookie -> {
-            Stream.of(cookie).forEach(c -> request.addCookie(c));
-        });
+        Cookie[] cookies = parseCookieHeader(request.getHeader(HTTPHeaderEnum.COOKIE.getDesc()));
+        Optional.ofNullable(cookies).ifPresent(cookie ->
+                Stream.of(cookie).forEach(c -> request.addCookie(c))
+        );
         //如果sessionid不是从cookie中获取的，则优先使用cookie中的sessionid
         if (!request.isRequestedSessionIdFromCookie() && cookies != null) {
             Stream.of(cookies)
@@ -206,6 +213,11 @@ public class HttpProcess {
     }
 
 
+    /**
+     * 将cookie字符串解析成cookie数组
+     * @param cookieListString 请求头中的cookie字符串
+     * @return cookie数组
+     */
     private Cookie[] parseCookieHeader(String cookieListString) {
         if (StringUtil.isBlank(cookieListString)) {
             return null;
@@ -218,115 +230,4 @@ public class HttpProcess {
     }
 
 
-    /**
-     * 连续读取字节符合条件则返回true，不符合则将读取的字节拼接到字符串缓存中
-     *
-     * @param beforeByte  前置字节
-     * @param afterByte   后置字节
-     * @param headers     请求头集合
-     * @param sb          字符串缓存
-     * @param beforeCache 前置读取字节缓存
-     * @return 校验结果
-     */
-    private boolean isLine(byte beforeByte, byte afterByte, List<String> headers, StringBuilder sb, int beforeCache) throws IOException {
-        int afterCache; //读取到前置字节符合条件时才读取第二个字节
-        if (beforeByte == beforeCache) {
-            afterCache = input.read();
-            if (afterByte == afterCache) {
-                if (!sb.toString().equals("")) {
-                    headers.add(sb.toString());
-                }
-                return true;
-            }
-            //如果读取的第二个字节不符合条件，则直接拼接即可
-            sb.append((char) beforeCache).append((char) afterCache);
-        }
-        return false;
-    }
-
-    /**
-     * 规范化URI
-     *
-     * @param path URI
-     * @return 规范化后的URI （null 规范化失败）
-     */
-    protected String normalize(String path) {
-        if (path == null) {
-            return null;
-        }
-        //拷贝一个副本
-        String normalized = path;
-
-        // 把/%7E 或 /%7e 替换成 /~
-        if (normalized.startsWith("/%7E") || normalized.startsWith("/%7e")) {
-            normalized = "/~" + normalized.substring(4);
-        }
-
-        //如果URI包含以下字符串，则停止规范化
-        if ((normalized.contains("%25"))
-                || (normalized.contains("%2F"))
-                || (normalized.contains("%2E"))
-                || (normalized.contains("%5C"))
-                || (normalized.contains("%2f"))
-                || (normalized.contains("%2e"))
-                || (normalized.contains("%5c"))) {
-            return null;
-        }
-
-        if ("/.".equals(normalized)) {
-            return "/";
-        }
-
-        // 规范化斜杠
-        if (normalized.indexOf('\\') >= 0) {
-            normalized = normalized.replace('\\', '/');
-        }
-        //如果URI不是以斜杠开头，则拼接一个斜杠
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-
-        // 将双斜杠替换为单斜杠
-        while (true) {
-            int index = normalized.indexOf("//");
-            if (index < 0) {
-                break;
-            }
-            normalized = normalized.substring(0, index) +
-                    normalized.substring(index + 1);
-        }
-
-        // 将 "/./" 替换为单斜杠
-        while (true) {
-            int index = normalized.indexOf("/./");
-            if (index < 0) {
-                break;
-            }
-            normalized = normalized.substring(0, index) +
-                    normalized.substring(index + 2);
-        }
-
-        // 把 "/../" 替换为单斜杠
-        while (true) {
-            int index = normalized.indexOf("/../");
-            if (index < 0) {
-                break;
-            }
-            // 试图使用URI做路径跳转，判断为非法请求
-            if (index == 0) {
-                return null;
-            }
-            int index2 = normalized.lastIndexOf('/', index - 1);
-            normalized = normalized.substring(0, index2) +
-                    normalized.substring(index + 3);
-        }
-
-        //"/..." 也判定为非法请求
-        if (normalized.contains("/...")) {
-            return null;
-        }
-
-        return normalized;
-
-    }
 }

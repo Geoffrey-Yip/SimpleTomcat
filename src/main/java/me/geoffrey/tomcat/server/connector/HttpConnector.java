@@ -14,7 +14,8 @@ import java.util.Optional;
 /**
  * @author Geoffrey.Yip
  * @time 2017/12/25 22:38
- * @description Http服务类
+ * @description Http连接器，用于等待客户端请求并将连接转交执行器执行
+ * @see HttpProcess HTTP执行器
  */
 public class HttpConnector implements Runnable {
 
@@ -26,20 +27,24 @@ public class HttpConnector implements Runnable {
     public static final String WEB_PROJECT_ROOT;
 
     /**
-     * 是否关闭服务器标识
+     * 是否关闭服务器标识(后期会实现更优雅关闭方式)
      */
     private transient boolean shutdowned;
 
     static{
-        //initialization relative Directory
+        //初始化用户的相对目录
         URL webrootURL = HttpConnector.class.getClassLoader().getResource("webroot");
         WEB_PROJECT_ROOT = Optional.ofNullable(webrootURL)
                 .orElseThrow(() -> new IllegalStateException("can't not find user web root file."))
                 .getFile().substring(1);
     }
 
+    /**
+     * 开启线程和Socket服务端，等待并处理连接
+     */
     @Override
     public void run() {
+        //开启SocketServer服务等待连接
         ServerSocket serverSocket;
         try {
             serverSocket = new ServerSocket(8080, 1, InetAddress.getByName("127.0.0.1"));
@@ -50,7 +55,9 @@ public class HttpConnector implements Runnable {
         }
 
         while (!shutdowned) {
+            //阻塞等待连接
             try (Socket accept = serverSocket.accept()) {
+                //处理连接
                 HttpProcess process = new HttpProcess(this);
                 process.process(accept);
             } catch (IOException e) {
@@ -65,6 +72,9 @@ public class HttpConnector implements Runnable {
         }
     }
 
+    /**
+     * 开启线程
+     */
     public void start(){
         new Thread(this).start();
     }

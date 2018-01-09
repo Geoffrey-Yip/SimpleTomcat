@@ -10,6 +10,7 @@ import me.geoffrey.tomcat.server.connector.HttpConnector;
 public final class Bootstrap {
 
     public static void main(String[] args){
+        //启动连接器等待连接
         new HttpConnector().start();
     }
 }

@@ -16,4 +16,15 @@ public class ArrayUtil {
     public static byte[] generatorCache(){
         return new byte[BUFFER_SIZE];
     }
+
+    /**
+     * 返回数组是否为空
+     * @param array 被检测数组
+     * @param <E> 泛型
+     * @return 检测结果
+     */
+    public static <E> boolean isEmpty(E[] array) {
+        return array == null || array.length == 0;
+    }
+
 }
