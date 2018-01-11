@@ -1,6 +1,10 @@
 package me.geoffrey.tomcat.server;
 
 import me.geoffrey.tomcat.server.connector.HttpConnector;
+import me.geoffrey.tomcat.server.container.SimpleContainer;
+import org.apache.catalina.Container;
+
+import java.io.IOException;
 
 /**
  * @author Geoffrey.Yip
@@ -9,8 +13,13 @@ import me.geoffrey.tomcat.server.connector.HttpConnector;
  */
 public final class Bootstrap {
 
-    public static void main(String[] args){
-        //启动连接器等待连接
-        new HttpConnector().start();
+    public static void main(String[] args) throws IOException {
+        HttpConnector connector = new HttpConnector();
+        Container container = new SimpleContainer();
+        connector.setContainer(container);
+        connector.initialize();
+        connector.start();
+        /*应用程序等待按下任意键结束*/
+        System.in.read();
     }
 }

@@ -28,14 +28,24 @@ import static java.util.stream.Collectors.toCollection;
  * @time 2017/12/31 17:40
  * @description Http处理器
  */
-public class HttpProcess {
+public class HttpProcess implements Runnable {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpProcess.class);
     /**
      * Servlet资源请求起始字符串
      **/
     private static final String SERVLET_URI_START_WITH = "/servlet/";
 
+    private int id;
+
     private HttpConnector httpConnector;
+
+    private boolean available;
+
+    /**
+     * The background thread.
+     */
+    private Thread thread;
     /**
      * HttpRequest
      **/
@@ -45,14 +55,19 @@ public class HttpProcess {
      **/
     private HttpResponse response;
 
+    private String threadName;
 
-    /**
-     * 构造方法
-     *
-     * @param httpConnector http连接器
-     */
-    public HttpProcess(HttpConnector httpConnector) {
+    private Socket socket;
+
+    private boolean stopped;
+
+
+    public HttpProcess(HttpConnector httpConnector, int id) {
         this.httpConnector = httpConnector;
+        this.id = id;
+        request = (HttpRequest) httpConnector.createRequest();
+        response = (HttpResponse) httpConnector.createResponse();
+        threadName = "HttpProcessor[" + httpConnector.getServerPort() + "][" + id + "]";
     }
 
     /**
@@ -60,7 +75,7 @@ public class HttpProcess {
      *
      * @param socket 请求socket
      */
-    public void process(Socket socket) throws IOException {
+    public void process(Socket socket) {
 
         try (InputStream input = socket.getInputStream();
              OutputStream output = socket.getOutputStream()) {
@@ -72,20 +87,29 @@ public class HttpProcess {
             this.parseHeaders(input);
             //调用对应的处理器处理
             if (request.getRequestURI().startsWith(SERVLET_URI_START_WITH)) {
-                new ServletProcess().process(request, response);
+                httpConnector.getContainer().invoke(request, response);
             } else {
                 new StaticResourceProcess().process(request, response);
             }
         } catch (ServletException e) {
             LOGGER.info("Catch ServletException from Socket process :", e);
+        } catch (IOException e){
+
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
 
     /**
      * 解析请求行和校验URI安全性
+     *
      * @param input socket输入流
-     * @throws IOException 流错误
+     * @throws IOException      流错误
      * @throws ServletException 读取到的请求行有误
      */
     private void parseRequest(InputStream input) throws IOException, ServletException {
@@ -158,6 +182,7 @@ public class HttpProcess {
 
     /**
      * 解析HTTP请求头
+     *
      * @param input socket输入流
      * @throws IOException 读取出错
      */
@@ -215,6 +240,7 @@ public class HttpProcess {
 
     /**
      * 将cookie字符串解析成cookie数组
+     *
      * @param cookieListString 请求头中的cookie字符串
      * @return cookie数组
      */
@@ -230,4 +256,45 @@ public class HttpProcess {
     }
 
 
+    @Override
+    public void run() {
+        while (!stopped) {
+            Socket socket = await();
+            process(socket);
+            httpConnector.recycle(this);
+        }
+    }
+
+    private Socket await(){
+        while(!available){
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        available = false;
+        Socket socket = this.socket;
+        notifyAll();
+        return socket;
+    }
+
+    public void start() {
+        thread = new Thread(this, threadName);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    public void assign(Socket socket) {
+        while (available) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        this.socket = socket;
+        available = true;
+        notifyAll();
+    }
 }

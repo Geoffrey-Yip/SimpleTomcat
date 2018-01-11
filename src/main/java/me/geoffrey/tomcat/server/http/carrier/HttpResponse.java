@@ -1,13 +1,17 @@
 package me.geoffrey.tomcat.server.http.carrier;
 
-import me.geoffrey.tomcat.server.connector.HttpConnector;
 import me.geoffrey.tomcat.server.constant.HttpVersionConstant;
+import me.geoffrey.tomcat.server.container.SimpleContainer;
 import me.geoffrey.tomcat.server.enums.HttpStatusEnum;
 import me.geoffrey.tomcat.server.util.ArrayUtil;
+import org.apache.catalina.Connector;
+import org.apache.catalina.Request;
+import org.apache.catalina.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -19,7 +23,7 @@ import java.util.Locale;
  * @time 2017/12/25 22:57
  * @description http响应载体
  */
-public class HttpResponse implements HttpServletResponse {
+public class HttpResponse implements HttpServletResponse,Response {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpResponse.class);
 
@@ -29,14 +33,14 @@ public class HttpResponse implements HttpServletResponse {
 
     public void accessStaticResources() throws IOException {
         //根据请求URI找到用户对应请求的资源文件
-        File staticResource = new File(HttpConnector.WEB_PROJECT_ROOT + request.getRequestURI());
+        File staticResource = new File(SimpleContainer.WEB_PROJECT_ROOT + request.getRequestURI());
         //资源存在
         if (staticResource.exists() && staticResource.isFile()) {
             outputStream.write(responseToByte(HttpStatusEnum.OK));
             writeFile(staticResource);
             //资源不存在
         } else {
-            staticResource = new File(HttpConnector.WEB_PROJECT_ROOT + "/404.html");
+            staticResource = new File(SimpleContainer.WEB_PROJECT_ROOT + "/404.html");
             outputStream.write(responseToByte(HttpStatusEnum.NOT_FOUND));
             writeFile(staticResource);
         }
@@ -71,6 +75,9 @@ public class HttpResponse implements HttpServletResponse {
                 .toString().getBytes();
     }
 
+    public HttpResponse() {
+    }
+
     public HttpResponse(OutputStream outputStream, HttpRequest request) {
         this.outputStream = outputStream;
         this.request = request;
@@ -84,6 +91,16 @@ public class HttpResponse implements HttpServletResponse {
     @Override
     public String getContentType() {
         return null;
+    }
+
+    @Override
+    public PrintWriter getReporter() {
+        return null;
+    }
+
+    @Override
+    public void recycle() {
+
     }
 
     @Override
@@ -135,6 +152,11 @@ public class HttpResponse implements HttpServletResponse {
     }
 
     @Override
+    public void sendAcknowledgement() throws IOException {
+
+    }
+
+    @Override
     public boolean isCommitted() {
         return false;
     }
@@ -154,8 +176,94 @@ public class HttpResponse implements HttpServletResponse {
         return null;
     }
 
+    @Override
+    public Connector getConnector() {
+        return null;
+    }
+
+    @Override
+    public void setConnector(Connector connector) {
+
+    }
+
+    @Override
+    public int getContentCount() {
+        return 0;
+    }
+
+    @Override
+    public void setAppCommitted(boolean appCommitted) {
+
+    }
+
+    @Override
+    public boolean isAppCommitted() {
+        return false;
+    }
+
+    @Override
+    public boolean getIncluded() {
+        return false;
+    }
+
+    @Override
+    public void setIncluded(boolean included) {
+
+    }
+
+    @Override
+    public String getInfo() {
+        return null;
+    }
+
+    @Override
     public HttpRequest getRequest() {
         return request;
+    }
+
+    @Override
+    public void setRequest(Request request) {
+
+    }
+
+    @Override
+    public ServletResponse getResponse() {
+        return null;
+    }
+
+    @Override
+    public OutputStream getStream() {
+        return null;
+    }
+
+    @Override
+    public void setStream(OutputStream stream) {
+
+    }
+
+    @Override
+    public void setSuspended(boolean suspended) {
+
+    }
+
+    @Override
+    public boolean isSuspended() {
+        return false;
+    }
+
+    @Override
+    public void setError() {
+
+    }
+
+    @Override
+    public boolean isError() {
+        return false;
+    }
+
+    @Override
+    public ServletOutputStream createOutputStream() throws IOException {
+        return null;
     }
 
     @Override
@@ -263,6 +371,7 @@ public class HttpResponse implements HttpServletResponse {
         return null;
     }
 
+    @Override
     public void finishResponse() {
         // sendHeaders();
         // Flush and close the appropriate output mechanism
@@ -270,5 +379,10 @@ public class HttpResponse implements HttpServletResponse {
             writer.flush();
             writer.close();
         }
+    }
+
+    @Override
+    public int getContentLength() {
+        return 0;
     }
 }

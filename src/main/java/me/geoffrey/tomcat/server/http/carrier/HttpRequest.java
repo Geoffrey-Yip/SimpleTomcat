@@ -6,6 +6,9 @@ import me.geoffrey.tomcat.server.util.Enumerator;
 import me.geoffrey.tomcat.server.util.ParameterMap;
 import me.geoffrey.tomcat.server.util.RequestUtil;
 import me.geoffrey.tomcat.server.util.StringUtil;
+import org.apache.catalina.Connector;
+import org.apache.catalina.Request;
+import org.apache.catalina.Response;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -22,7 +25,7 @@ import java.util.*;
  * @time 2017/12/25 22:57
  * @description http请求类
  */
-public class HttpRequest implements HttpServletRequest {
+public class HttpRequest implements HttpServletRequest,Request {
 
     /**
      * 请求内容类型
@@ -149,6 +152,8 @@ public class HttpRequest implements HttpServletRequest {
         this.input = input;
     }
 
+    public HttpRequest() {
+    }
 
     /**
      * 添加请求头
@@ -220,20 +225,56 @@ public class HttpRequest implements HttpServletRequest {
      *
      * @throws IOException if an input/output error occurs
      */
+    @Override
     public ServletInputStream createInputStream() throws IOException {
         return (new RequestStream(this));
     }
 
+    @Override
+    public void finishRequest() throws IOException {
+
+    }
+
+    @Override
+    public Object getNote(String name) {
+        return null;
+    }
+
+    @Override
+    public Iterator getNoteNames() {
+        return null;
+    }
+
+    @Override
+    public void recycle() {
+
+    }
+
+    @Override
+    public void removeNote(String name) {
+
+    }
+    @Override
     public InputStream getStream() {
         return input;
     }
 
+    @Override
+    public void setStream(InputStream stream) {
+
+    }
+    @Override
     public void setContentLength(int length) {
         this.contentLength = length;
     }
-
+    @Override
     public void setContentType(String type) {
         this.contentType = type;
+    }
+
+    @Override
+    public void setNote(String name, Object value) {
+
     }
 
     public void setInet(InetAddress inetAddress) {
@@ -256,8 +297,24 @@ public class HttpRequest implements HttpServletRequest {
         this.pathInfo = path;
     }
 
+    @Override
     public void setProtocol(String protocol) {
         this.protocol = protocol;
+    }
+
+    @Override
+    public void setRemoteAddr(String remote) {
+
+    }
+
+    @Override
+    public void setScheme(String scheme) {
+
+    }
+
+    @Override
+    public void setSecure(boolean secure) {
+
     }
 
     public void setQueryString(String queryString) {
@@ -273,6 +330,7 @@ public class HttpRequest implements HttpServletRequest {
      *
      * @param name 虚拟主机名
      */
+    @Override
     public void setServerName(String name) {
         this.serverName = name;
     }
@@ -282,10 +340,12 @@ public class HttpRequest implements HttpServletRequest {
      *
      * @param port 服务器端口号
      */
+    @Override
     public void setServerPort(int port) {
         this.serverPort = port;
     }
 
+    @Override
     public void setSocket(Socket socket) {
         this.socket = socket;
     }
@@ -735,13 +795,49 @@ public class HttpRequest implements HttpServletRequest {
     public void setAttribute(String key, Object value) {
     }
 
-    /**
-     * Set the authorization credentials sent with this request.
-     *
-     * @param authorization The new authorization credentials
-     */
+    @Override
+    public String getAuthorization() {
+        return null;
+    }
+
+    @Override
     public void setAuthorization(String authorization) {
         this.authorization = authorization;
+    }
+
+    @Override
+    public Connector getConnector() {
+        return null;
+    }
+
+    @Override
+    public void setConnector(Connector connector) {
+
+    }
+
+    @Override
+    public String getInfo() {
+        return null;
+    }
+
+    @Override
+    public ServletRequest getRequest() {
+        return null;
+    }
+
+    @Override
+    public Response getResponse() {
+        return null;
+    }
+
+    @Override
+    public void setResponse(Response response) {
+
+    }
+
+    @Override
+    public Socket getSocket() {
+        return socket;
     }
 
     @Override
